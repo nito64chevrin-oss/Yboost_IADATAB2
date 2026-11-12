@@ -1,0 +1,23 @@
+# Données (retéléchargées par src/download.py)
+data/
+
+# Résultats générés
+reports/*.csv
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Éditeur et système
+.vscode/
+.DS_Store
+Thumbs.db
