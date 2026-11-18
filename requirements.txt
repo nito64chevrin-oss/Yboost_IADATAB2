@@ -1,0 +1,19 @@
+# Download
+requests
+
+# Manipulation
+pandas
+openpyxl
+
+# Machine Learning
+scikit-learn
+
+# Graphism
+plotly
+matplotlib
+
+# Notebook
+jupyter
+
+# Dashboard
+streamlit
