@@ -1,13 +1,19 @@
+"""Télécharge toutes les sources de données du projet dans data/raw/."""
+
 from pathlib import Path
 
 import requests
 
+# Dossier de destination
 RAW_DIR = Path("data") / "raw"
 
+# Lien stable de téléchargement d'un fichier data.gouv.fr
+DATAGOUV_DOWNLOAD_URL = "https://www.data.gouv.fr/api/1/datasets/r/{id}"
+
+# Nom du fichier local -> URL de téléchargement
+# (les jours fériés ne sont pas téléchargés : ils sont calculés dans prepare.py)
 SOURCES = {
     "cnc_frequentation.xlsx": "https://www.data.gouv.fr/api/1/datasets/r/ecd520e1-b16d-4831-a5d7-586290d31e69",
-    "calendrier_scolaire.csv": "https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/exports/csv",
-    "jours_feries.csv": "",  # à compléter : lien du CSV sur data.gouv.fr
 }
 
 
@@ -25,16 +31,40 @@ def download_file(url: str, destination: Path) -> None:
     print(f"  -> OK ({taille_ko:.0f} Ko)")
 
 
+# --- Vacances scolaires par zones (depuis 1990) ---
+
+VACANCES_DATASET_ID = "5aeb1610c751df5402613fae"
+VACANCES_API_URL = f"https://www.data.gouv.fr/api/1/datasets/{VACANCES_DATASET_ID}/"
+
+
+def telecharger_vacances() -> None:
+    """Retrouve le fichier CSV du jeu « Vacances scolaires par zones » et le télécharge."""
+    response = requests.get(VACANCES_API_URL, timeout=60)
+    response.raise_for_status()
+    ressources = response.json()["resources"]
+
+    # On cherche le fichier principal au format CSV
+    for ressource in ressources:
+        if ressource["type"] == "main" and "csv" in ressource["format"].lower():
+            url = DATAGOUV_DOWNLOAD_URL.format(id=ressource["id"])
+            download_file(url, RAW_DIR / "vacances_scolaires.csv")
+            return
+
+    raise RuntimeError("Aucun fichier CSV trouvé pour les vacances scolaires.")
+
+
+# --- Météo-France : données quotidiennes ---
+
 METEO_DATASET_ID = "6569b51ae64326786e4e8e1a"
 METEO_API_URL = (
     f"https://www.data.gouv.fr/api/2/datasets/{METEO_DATASET_ID}"
     "/resources/?page=1&page_size=1000&type=main"
 )
 
-DATAGOUV_DOWNLOAD_URL = "https://www.data.gouv.fr/api/1/datasets/r/{id}"
-
+# Départements à télécharger (codes sur 2 chiffres)
 DEPARTEMENTS = ["75", "13", "69", "59", "33", "31", "06", "44", "67", "34"]
 
+# Périodes utiles pour couvrir 1993 -> aujourd'hui
 PERIODES = ["periode_1950-2024", "periode_2025-2026"]
 
 
@@ -70,11 +100,9 @@ def main() -> None:
     RAW_DIR.mkdir(parents=True, exist_ok=True)
 
     for nom_fichier, url in SOURCES.items():
-        if not url:
-            print(f"Lien manquant pour {nom_fichier}, fichier ignoré.")
-            continue
         download_file(url, RAW_DIR / nom_fichier)
 
+    telecharger_vacances()
     telecharger_meteo()
 
     print("Toutes les données ont été téléchargées.")
